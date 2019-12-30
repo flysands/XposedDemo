@@ -51,13 +51,13 @@ Xposed开发框架下有很多优秀的插件可以供我们直接使用，这�
 #+end_src
 ** 创建Xposed工程
 1. 新建android工程
-   [[file:../images/new-android-project.png]]
+   [[file:images/new-android-project.png]]
 2. 在manifest中添加meta-data
    第一个xposedmodule的属性为ture，证明这是一个xposed的module；第二个xposeddescription，这是介绍项目的话语；第三个xposedminversion则是说明该xposedmodule所支持的最小版本，本文填写的最低版本就是54。
-   [[file:../images/add-meta-data.png]]
+   [[file:images/add-meta-data.png]]
 3. 导入xposed api包
    导入xposed api包有两种方式。第一，可以下载jar文件，存放至lib目录，然后在用provided的方式添加。或者直接在build.gradle中使用 *provided* 关键字添加依赖。注意不要使用 *compile* 关键字。我们只需要借助依赖包把apk编译成功即可，不需要把依赖包打包到apk的代码里。
-   [[file:../images/add-xposed-api.png]]
+   [[file:images/add-xposed-api.png]]
 4. 添加xposed_init文件
    在src/main目录下添加一个assets目录，目录下添加一个xposed_init文件，里面的代码是你的Hook类的包名+类名。而本项目就是 *com.flysands.xposeddemo.ModuleTest* 。
 5. 添加插件代码
@@ -103,7 +103,7 @@ Xposed开发框架下有很多优秀的插件可以供我们直接使用，这�
    #+end_src
 ** 运行目标apk
 目标apk的getString的参数被我们修改为 *xposed test* 。
-[[file:../images/hook-result.png]]
+[[file:images/hook-result.png]]
 #+begin_quote
 本文仅仅叙述了xposed插件的开发过程。在下一篇文章我们会详细介绍，xposed 和 burp交互使用。抓取并修改apk加密前的数据。
 #+end_quote
