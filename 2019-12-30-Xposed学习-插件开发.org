@@ -1,0 +1,109 @@
+#+LATEX_HEADER: \usepackage{fontspec}
+#+LATEX_HEADER: \setmainfont{Songti SC}
+#+STARTUP: indent
+#+STARTUP: hidestars
+#+OPTIONS: ^:nil toc:nil
+#+JEKYLL_CATEGORIES: android
+#+JEKYLL_TAGS: android xposed
+#+JEKYLL_COMMENTS: true
+#+TITLE: Xposed学习-插件开发
+
+* Xposed介绍 
+  Xposed框架是一个由xda开发的hook框架，并且有许多基于这个框架的优秀插件（功能模块）。这些插件配合Xposed框架可以在不修改APK的情况下影响程序的运行，几乎可以达到为所欲为的目的，对APK实现界面修改、逻辑修改、数据修改。比如：直接把APP的界面改成自己想要的样子，去掉界面里不喜欢的东西。自动抢红包，消息防撤回，步数修改等等。不过这一切的先决条件就是Xposed需要拥有最高权限。
+* Xposed插件
+#+begin_quote
+Xposed开发框架下有很多优秀的插件可以供我们直接使用，这里列举一下我日常工作中使用到的插件。如果自己有兴趣的话，也可以自己开发插件。本文后半段会介绍如何开发插件。
+#+end_quote
+** 插件列表
+1. JustTrustMe（去除ssl证书绑定）
+2. sslnpinning（同上）
+3. enablesnapshoot（去除截屏限定）
+4. inspeckage（客户端动态分析工具）
+5. AndroidIdChanger（设备信息修改）
+* Xposed框架安全
+#+begin_quote
+网上有很多文章科普了Xposed安装方式，这里就不展开说明。具体步骤就是先root手机、然后安装Xposed Installer。唯一需要注意的是sdk 23之后需要用到recovery工具安装。
+#+end_quote
+* 开发自己的插件
+** 目标APK
+目标APK很简单，直接调用getString函数获取字符串，然后赋值给TextView。接下来我们开发一个插件，修改getString函数的返回值。
+#+begin_src java
+  import android.os.Bundle;
+  import android.support.v7.app.AppCompatActivity;
+  import android.widget.TextView;
+
+  public class MainActivity extends AppCompatActivity {
+
+      private TextView mTv;
+
+      @Override
+      protected void onCreate(Bundle savedInstanceState) {
+          super.onCreate(savedInstanceState);
+          setContentView(R.layout.activity_main);
+          mTv = findViewById(R.id.tv);
+          mTv.setText(getString());
+      }
+
+      private String getString() {
+          return "have a nice day.";
+      }
+  }
+#+end_src
+** 创建Xposed工程
+1. 新建android工程
+   [[file:../images/new-android-project.png]]
+2. 在manifest中添加meta-data
+   第一个xposedmodule的属性为ture，证明这是一个xposed的module；第二个xposeddescription，这是介绍项目的话语；第三个xposedminversion则是说明该xposedmodule所支持的最小版本，本文填写的最低版本就是54。
+   [[file:../images/add-meta-data.png]]
+3. 导入xposed api包
+   导入xposed api包有两种方式。第一，可以下载jar文件，存放至lib目录，然后在用provided的方式添加。或者直接在build.gradle中使用 *provided* 关键字添加依赖。注意不要使用 *compile* 关键字。我们只需要借助依赖包把apk编译成功即可，不需要把依赖包打包到apk的代码里。
+   [[file:../images/add-xposed-api.png]]
+4. 添加xposed_init文件
+   在src/main目录下添加一个assets目录，目录下添加一个xposed_init文件，里面的代码是你的Hook类的包名+类名。而本项目就是 *com.flysands.xposeddemo.ModuleTest* 。
+5. 添加插件代码
+   继承了IXposedHookLoadPackage接口，重写了handleLoadPackage方法，判断了下包名，如果是目标apk包名。则调用XposedHelpers.findAndHookMethod hook掉getString方法，在XC_MethodHook重写afterHookedMethod，当geString执行后会回调这个方法，把返回值修改为 *xposed test* 。
+   #+begin_src java
+     package com.flysands.xposeddemo;
+
+
+     import android.util.Log;
+
+     import de.robv.android.xposed.IXposedHookLoadPackage;
+     import de.robv.android.xposed.XC_MethodHook;
+     import de.robv.android.xposed.XposedBridge;
+     import de.robv.android.xposed.XposedHelpers;
+     import de.robv.android.xposed.callbacks.XC_LoadPackage;
+
+     /**
+      ,* Created by chenxuesong on 2019/12/30.
+      ,*/
+
+     public class ModuleTest implements IXposedHookLoadPackage {
+
+         public static final String TAG = "flysands";
+
+         @Override
+         public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
+             Log.d(TAG, "try to hook " + lpparam.packageName);
+             if ("com.flysands.dronydemo".equals(lpparam.packageName)) {
+                 XposedBridge.log("ready to hook method.");
+                 XposedHelpers.findAndHookMethod("com.flysands.dronydemo.MainActivity",
+                                                 lpparam.classLoader, "getString",
+                                                 new XC_MethodHook() {
+                                                     @Override
+                                                     protected void afterHookedMethod(
+                                                                                      MethodHookParam param) throws Throwable {
+                                                         super.afterHookedMethod(param);
+                                                         param.setResult("xposed test");
+                                                     }
+                                                 });
+             }
+         }
+     }
+   #+end_src
+** 运行目标apk
+目标apk的getString的参数被我们修改为 *xposed test* 。
+[[file:../images/hook-result.png]]
+#+begin_quote
+本文仅仅叙述了xposed插件的开发过程。在下一篇文章我们会详细介绍，xposed 和 burp交互使用。抓取并修改apk加密前的数据。
+#+end_quote
